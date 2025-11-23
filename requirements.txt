@@ -1,4 +1,3 @@
 fastapi
 uvicorn
-mysql-connector-python
-python-multipart
+psycopg2-binary
