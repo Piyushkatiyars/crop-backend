@@ -1,46 +1,26 @@
-from fastapi import FastAPI, Form
-import mysql.connector
-import smtplib
-from email.mime.text import MIMEText
+from fastapi import FastAPI
+import psycopg2
+import os
 
 app = FastAPI()
 
-db = mysql.connector.connect(
-    host="sql305.infinityfree.com",
-    user="if0_40489081",
-    password="piyush@123",
-    database="if0_40489081_cropdb"
-)
-cursor = db.cursor()
+DATABASE_URL = os.getenv("DATABASE_URL")
 
-def send_email(name, email):
-    sender = "piyushradhe14@gmail.com"
-    password = "szxi wyoqxjsz btrf"
+def get_db_connection():
+    return psycopg2.connect(DATABASE_URL)
 
-    msg = MIMEText(f"New User Registered:\nName: {name}\nEmail: {email}")
-    msg['Subject'] = "New Account Created"
-    msg['From'] = sender
-    msg['To'] = sender
+@app.get("/")
+def home():
+    return {"message": "Crop Backend Running with PostgreSQL!"}
 
-    server = smtplib.SMTP_SSL("smtp.gmail.com", 465)
-    server.login(sender, password)
-    server.sendmail(sender, sender, msg.as_string())
-    server.quit()
-
-@app.post("/signup")
-def signup(name: str = Form(), email: str = Form(), password: str = Form()):
-    cursor.execute(
-        "INSERT INTO users (name, email, password) VALUES (%s, %s, %s)",
-        (name, email, password)
-    )
-    db.commit()
-    send_email(name, email)
-    return {"message": "Account Created Successfully"}
-
-@app.post("/login")
-def login(email: str = Form(), password: str = Form()):
-    cursor.execute("SELECT * FROM users WHERE email=%s AND password=%s", (email, password))
-    user = cursor.fetchone()
-    if not user:
-        return {"message": "Invalid Credentials"}
-    return {"message": "Login Successful", "user": user}
+@app.get("/test-db")
+def test_db():
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT now();")
+        result = cursor.fetchone()
+        conn.close()
+        return {"db_time": result}
+    except Exception as e:
+        return {"error": str(e)}
